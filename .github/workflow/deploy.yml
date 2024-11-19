@@ -1,0 +1,54 @@
+name: CI/CD Pipeline for React on Tomcat
+
+on:
+  push:
+    branches:
+      - main  # This will run the workflow on pushes to the main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'  # Use the Node version required by your React app
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the React app
+        run: npm run build  # This assumes "npm run build" creates the production build in "build" folder
+
+      - name: Archive production files
+        run: tar -czf build.tar.gz -C build .
+
+      - name: Deploy to Tomcat server
+        env:
+          SERVER_IP: ${{ secrets.192.168.100.95 }}
+          SERVER_USER: ${{ secrets.root }}
+          TOMCAT_WEBAPPS_PATH: ${{ secrets./opt/tomcat/apache-tomcat-9.0.97/webapps }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          # Transfer the build files to the server
+          scp -o StrictHostKeyChecking=no build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:~/
+
+          # Connect to the server and deploy
+          ssh -o StrictHostKeyChecking=no ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} << 'EOF'
+            # Stop Tomcat
+            sudo systemctl stop tomcat
+
+            # Clean up old build and deploy new files
+            rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
+            tar -xzf build.tar.gz -C ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT
+
+            # Start Tomcat
+            sudo systemctl start tomcat
+          EOF
