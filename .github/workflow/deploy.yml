@@ -29,9 +29,9 @@ jobs:
 
       - name: Deploy to Tomcat server
         env:
-          SERVER_IP: ${{ secrets.192.168.100.95 }}
-          SERVER_USER: ${{ secrets.root }}
-          TOMCAT_WEBAPPS_PATH: ${{ secrets./opt/tomcat/apache-tomcat-9.0.97/webapps }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
