@@ -20,15 +20,12 @@ jobs:
         # Debug: Print the SERVER_SSH_IP value to ensure it's correct
         echo "SERVER_SSH_IP: $SERVER_SSH_IP"
         
-        # Check if SERVER_SSH_IP is a valid IP address or domain
-        nslookup $SERVER_SSH_IP || echo "Could not resolve $SERVER_SSH_IP"
-        
-        # Set up SSH with private key
+        # Disable reverse DNS lookup to avoid NXDOMAIN error
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         
-        # Add server to known hosts to prevent SSH warnings
+        # Add the server's IP to known hosts with the -H flag (disabling reverse lookup)
         ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
 
     - name: Deploy to Tomcat server
@@ -39,10 +36,10 @@ jobs:
         SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
       run: |
         # Transfer the build archive to the server
-        scp -o StrictHostKeyChecking=no build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
 
         # SSH into the server and deploy the app
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << 'EOF'
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << 'EOF'
           # Stop Tomcat
           sudo systemctl stop tomcat
           
