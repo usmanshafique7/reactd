@@ -20,11 +20,14 @@ jobs:
         # Debug: Print the SERVER_SSH_IP value to ensure it's correct
         echo "SERVER_SSH_IP: $SERVER_SSH_IP"
         
+        # Check if SERVER_SSH_IP is a valid IP address or domain
+        nslookup $SERVER_SSH_IP || echo "Could not resolve $SERVER_SSH_IP"
+        
         # Set up SSH with private key
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-
+        
         # Add server to known hosts to prevent SSH warnings
         ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
 
