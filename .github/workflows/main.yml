@@ -17,10 +17,16 @@ jobs:
       env:
         SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
       run: |
+        # Debug: Print the SERVER_SSH_IP value to ensure it's correct
+        echo "SERVER_SSH_IP: $SERVER_SSH_IP"
+        
+        # Set up SSH with private key
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ env.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
+
+        # Add server to known hosts to prevent SSH warnings
+        ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
 
     - name: Deploy to Tomcat server
       env:
@@ -31,11 +37,12 @@ jobs:
       run: |
         # Transfer the build archive to the server
         scp -o StrictHostKeyChecking=no build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
-        
+
         # SSH into the server and deploy the app
         ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << 'EOF'
           # Stop Tomcat
           sudo systemctl stop tomcat
+          
           # Clean up old files in the ROOT directory
           rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
           
