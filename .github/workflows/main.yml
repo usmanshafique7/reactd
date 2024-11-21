@@ -1,65 +1,47 @@
-name: CI/CD Pipeline for React on Tomcat
+name: Deploy to Tomcat
 
 on:
   push:
     branches:
-      - main  # Trigger the workflow on pushes to the main branch
+      - main
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code from GitHub repository
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      # Step 2: Set up Node.js (Node.js 18 LTS)
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'  # Specify Node.js version 18
-          cache: 'npm'  # Enable caching for npm dependencies
+    - name: Set up SSH
+      env:
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ env.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
 
-      # Step 3: Install project dependencies
-      - name: Install dependencies
-        run: npm install
-
-      # Step 4: Build the React application
-      - name: Build React app
-        run: npm run build  # Assumes the build command generates files in the "build" directory
-
-      # Step 5: Compress the build files into an archive
-      - name: Archive production files
-        run: tar -czf build.tar.gz -C build .
-
-      # Step 6: Deploy the app to the Tomcat server
-      - name: Deploy to Tomcat server
-        env:
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
-          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-        run: |
-          # Set up SSH for secure connection
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          # Transfer the build archive to the server
-          scp -o StrictHostKeyChecking=no build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
-
-          # SSH into the server and deploy the app
-          ssh -o StrictHostKeyChecking=no ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << 'EOF'
-            # Stop Tomcat
-            sudo systemctl stop tomcat
-
-            # Clean up old files in the ROOT directory
-            rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
-            
-            # Extract the new build files
-            tar -xzf build.tar.gz -C ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT
-
-            # Start Tomcat
-            sudo systemctl start tomcat
-          EOF
+    - name: Deploy to Tomcat server
+      env:
+        SERVER_IP: ${{ secrets.SERVER_IP }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+      run: |
+        # Transfer the build archive to the server
+        scp -o StrictHostKeyChecking=no build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
+        
+        # SSH into the server and deploy the app
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << 'EOF'
+          # Stop Tomcat
+          sudo systemctl stop tomcat
+          # Clean up old files in the ROOT directory
+          rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
+          
+          # Extract the new build files
+          tar -xzf build.tar.gz -C ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT
+          
+          # Start Tomcat
+          sudo systemctl start tomcat
+        EOF
