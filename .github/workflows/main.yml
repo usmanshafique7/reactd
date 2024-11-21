@@ -47,7 +47,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
 
           # Transfer the build archive to the server
-          scp -o StrictHostKeyChecking=no build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:~/
+          scp -o StrictHostKeyChecking=no build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
 
           # SSH into the server and deploy the app
           ssh -o StrictHostKeyChecking=no ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << 'EOF'
