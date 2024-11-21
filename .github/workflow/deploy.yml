@@ -5,8 +5,7 @@ on:
     branches:
       - main  # This will run the workflow on pushes to the main branch
 
-jobs:
-  build:
+build:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,13 +15,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '18'  # Use the Node version required by your React app
+          node-version: '18'
 
       - name: Install dependencies
         run: npm install
 
       - name: Build the React app
-        run: npm run build  # This assumes "npm run build" creates the production build in "build" folder
+        run: npm run build
 
       - name: Archive production files
         run: tar -czf build.tar.gz -C build .
@@ -42,13 +41,20 @@ jobs:
 
           # Connect to the server and deploy
           ssh -o StrictHostKeyChecking=no ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} << 'EOF'
+            # Check the Tomcat service status
+            systemctl status tomcat
+
             # Stop Tomcat
             sudo systemctl stop tomcat
+            sleep 5  # Give it a few seconds to stop
 
             # Clean up old build and deploy new files
-            rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
+            sudo rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
             tar -xzf build.tar.gz -C ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT
 
             # Start Tomcat
             sudo systemctl start tomcat
+            # Check if Tomcat started successfully
+            systemctl status tomcat
           EOF
+
