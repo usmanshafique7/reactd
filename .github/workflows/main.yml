@@ -16,39 +16,43 @@ jobs:
     - name: Set up SSH
       env:
         SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
-        # Debug: Print the SERVER_SSH_IP value to ensure it's correct
-        echo "SERVER_SSH_IP: $SERVER_SSH_IP"
-        
-        # Disable reverse DNS lookup to avoid NXDOMAIN error
+        # Debug: Ensure SERVER_SSH_IP is being passed correctly
+        echo "Debug: SERVER_SSH_IP is $SERVER_SSH_IP"
+
+        # Create SSH directory and add private key
         mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        
-        # Add the server's IP to known hosts with the -H flag (disabling reverse lookup)
+
+        # Add the server's IP to known_hosts to avoid interactive prompt
         ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
+
+        # Test SSH connection (optional, but helpful for debugging)
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@$SERVER_SSH_IP echo "SSH connection established successfully!"
 
     - name: Deploy to Tomcat server
       env:
-        SERVER_IP: ${{ secrets.SERVER_IP }}
         SERVER_USER: ${{ secrets.SERVER_USER }}
-        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
         SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
       run: |
         # Transfer the build archive to the server
-        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
+        scp -o StrictHostKeyChecking=no build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
 
         # SSH into the server and deploy the app
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << 'EOF'
-          # Stop Tomcat
+        ssh -o StrictHostKeyChecking=no ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << EOF
+          echo "Stopping Tomcat..."
           sudo systemctl stop tomcat
-          
-          # Clean up old files in the ROOT directory
-          rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
-          
-          # Extract the new build files
-          tar -xzf build.tar.gz -C ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT
-          
-          # Start Tomcat
+
+          echo "Cleaning up old files in the ROOT directory..."
+          sudo rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
+
+          echo "Extracting new files..."
+          tar -xzf ~/build.tar.gz -C ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT
+
+          echo "Starting Tomcat..."
           sudo systemctl start tomcat
+          echo "Deployment complete!"
         EOF
