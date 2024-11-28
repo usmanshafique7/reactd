@@ -37,19 +37,19 @@ jobs:
         echo "Check point 2"
         
         # Save the private key to id_rsa
-        echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
+        # echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+        # chmod 600 ~/.ssh/id_rsa
 
-        echo "Check point 3"
+        # echo "Check point 3"
 
         # Add the server's IP to known_hosts
-        ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
+        # ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
 
         echo "Check point 4"
 
         # Debug output
-        echo "Debug: known_hosts content:"
-        cat ~/.ssh/known_hosts
+        # echo "Debug: known_hosts content:"
+        # cat ~/.ssh/known_hosts
 
         echo "Check point 5"
         
