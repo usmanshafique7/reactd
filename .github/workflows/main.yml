@@ -17,9 +17,9 @@ jobs:
     # Step 2: Set up SSH and test connection
     - name: Set up SSH
       env:
-        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}  # Public IP of your server (e.g., 182.183.2.96)
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # SSH private key from GitHub secrets
-        SERVER_USER: ${{ secrets.SERVER_USER }}  # Server user (e.g., root or your username)
+        SERVER_SSH_IP: 182.183.2.96:22  # Public IP of your server (e.g., 182.183.2.96) ${{ secrets.SERVER_SSH_IP }}
+        SSH_PRIVATE_KEY: ${{ SSH_PRIVATE_KEY }}  # SSH private key from GitHub secrets
+        SERVER_USER: root  # Server user (e.g., root or your username) ${{ secrets.SERVER_USER }}
       run: |
         echo "Debug: Setting up SSH..."
         echo "SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}"
