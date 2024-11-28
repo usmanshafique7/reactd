@@ -22,6 +22,8 @@ jobs:
         SERVER_USER: ${{ secrets.SERVER_USER }}  # Server user (e.g., root or your username)
       run: |
         echo "Debug: Setting up SSH..."
+        echo "SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}"
+        echo "SERVER_USER: ${{ secrets.SERVER_USER }}"
         
         # Ensure SERVER_SSH_IP is set
         if [ -z "$SERVER_SSH_IP" ]; then
