@@ -13,14 +13,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up SSH
-      env:
-        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      run: |
-       
-        echo "Testing SSH connection to $SERVER_SSH_IP..."
-        ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o UserKnownHostsFile=/dev/null root@182.183.2.96 echo "SSH connection established successfully!"
+    
     
     - name: Deploy to Server
       env:
