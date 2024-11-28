@@ -54,8 +54,8 @@ jobs:
         echo "Check point 5"
         
         # Test SSH connection
-        echo "Testing SSH connection to $SERVER_SSH_IP..."
-        ssh -vvv -o StrictHostKeyChecking=no root@182.183.2.96 echo "SSH connection established successfully!"
+        # echo "Testing SSH connection to $SERVER_SSH_IP..."
+        # ssh -vvv -o StrictHostKeyChecking=no root@182.183.2.96 echo "SSH connection established successfully!"
 
         echo "Check point 6"
     
