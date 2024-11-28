@@ -17,8 +17,9 @@ jobs:
     # Step 2: Set up SSH and test connection
     - name: Set up SSH
       env:
-        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}  # Public IP of your server (e.g., 182.183.2.96)
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # SSH private key from GitHub secrets
+        SERVER_USER: ${{ secrets.SERVER_USER }}  # Server user (e.g., root or your username)
       run: |
         echo "Debug: Setting up SSH..."
         
@@ -44,14 +45,14 @@ jobs:
         
         # Test SSH connection
         echo "Testing SSH connection to $SERVER_SSH_IP..."
-        ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=10 <your-server-user>@$SERVER_SSH_IP echo "SSH connection established successfully!"
+        ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=10 $SERVER_USER@$SERVER_SSH_IP echo "SSH connection established successfully!"
     
     # Step 3: Deploy to Tomcat server
     - name: Deploy to Tomcat server
       env:
-        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-        SERVER_USER: ${{ secrets.SERVER_USER }}
-        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}  # Public IP of your server
+        SERVER_USER: ${{ secrets.SERVER_USER }}  # Server user (e.g., root)
+        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}  # Path to Tomcat webapps directory
       run: |
         echo "Starting deployment to Tomcat server..."
 
@@ -61,19 +62,19 @@ jobs:
 
         # Transfer the build archive to the server
         echo "Transferring build archive to the server..."
-        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }}:~/
+        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/home/$SERVER_USER/
 
         # SSH into the server and deploy the app
         echo "Deploying app to Tomcat..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null ${{ env.SERVER_USER }}@${{ env.SERVER_SSH_IP }} << EOF
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_SSH_IP << EOF
           echo "Stopping Tomcat..."
           sudo systemctl stop tomcat
           
           echo "Cleaning up old files..."
-          rm -rf ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT/*
-
+          rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/*
+          
           echo "Extracting new build files..."
-          tar -xzf build.tar.gz -C ${{ env.TOMCAT_WEBAPPS_PATH }}/ROOT
+          tar -xzf build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT
 
           echo "Starting Tomcat..."
           sudo systemctl start tomcat
