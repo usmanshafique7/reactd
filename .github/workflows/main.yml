@@ -1,4 +1,4 @@
-name: Deploy to Tomcat
+name: Deploy to Server
 
 on:
   push:
@@ -10,86 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout the repository
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Step 2: Set up SSH and test connection
     - name: Set up SSH
       env:
-        SERVER_SSH_IP: 182.183.2.96  # Public IP of your server (e.g., 182.183.2.96) ${{ secrets.SERVER_SSH_IP }}
-        SSH_PRIVATE_KEY: ${{ env.SSH_PRIVATE_KEY }}  # SSH private key from GitHub secrets
-        SERVER_USER: root  # Server user (e.g., root or your username) ${{ secrets.SERVER_USER }}
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
-        echo "Debug: Setting up SSH..."
-        echo "SERVER_SSH_IP: ${{ env.SSH_PRIVATE_KEY }}"
-        echo "SERVER_USER: ${{ secrets.SERVER_USER }}"
-        
-        # Ensure SERVER_SSH_IP is set
-        if [ -z "$SERVER_SSH_IP" ]; then
-          echo "Error: SERVER_SSH_IP is not set in secrets."
-          exit 1
-        fi
-        echo "Check point 1"
-        # Create the SSH directory
         mkdir -p ~/.ssh
-        
-        echo "Check point 2"
-        
-        # Save the private key to id_rsa
-        # echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-        # chmod 600 ~/.ssh/id_rsa
-
-        # echo "Check point 3"
-
-        # Add the server's IP to known_hosts
-        # ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
-
-        echo "Check point 4"
-
-        # Debug output
-        # echo "Debug: known_hosts content:"
-        # cat ~/.ssh/known_hosts
-
-        echo "Check point 5"
-        
-        # Test SSH connection
+        echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
         echo "Testing SSH connection to $SERVER_SSH_IP..."
-        ssh -vvv -o StrictHostKeyChecking=no root@182.183.2.96 echo "SSH connection established successfully!"
-
-        echo "Check point 6"
+        ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o UserKnownHostsFile=/dev/null user@$SERVER_SSH_IP echo "SSH connection established successfully!"
     
-    # Step 3: Deploy to Tomcat server
-    - name: Deploy to Tomcat server
+    - name: Deploy to Server
       env:
-        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}  # Public IP of your server
-        SERVER_USER: ${{ secrets.SERVER_USER }}  # Server user (e.g., root)
-        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}  # Path to Tomcat webapps directory
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
       run: |
-        echo "Starting deployment to Tomcat server..."
-
-        # Create a tarball of the build directory
-        echo "Creating build archive..."
-        tar -czf build.tar.gz build/
-
-        # Transfer the build archive to the server
-        echo "Transferring build archive to the server..."
-        scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/home/$SERVER_USER/
-
-        # SSH into the server and deploy the app
-        echo "Deploying app to Tomcat..."
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_SSH_IP << EOF
-          echo "Stopping Tomcat..."
-          sudo systemctl stop tomcat
-          
-          echo "Cleaning up old files..."
-          rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/*
-          
-          echo "Extracting new build files..."
-          tar -xzf build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT
-
-          echo "Starting Tomcat..."
-          sudo systemctl start tomcat
-
-          echo "Deployment completed!"
-        EOF
+        echo "Starting deployment..."
+        # Deploy steps here...
