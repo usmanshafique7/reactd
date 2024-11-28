@@ -18,12 +18,9 @@ jobs:
         SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
-        mkdir -p ~/.ssh
-        echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
+       
         echo "Testing SSH connection to $SERVER_SSH_IP..."
-        ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o UserKnownHostsFile=/dev/null user@$SERVER_SSH_IP echo "SSH connection established successfully!"
+        ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o UserKnownHostsFile=/dev/null root@182.183.2.96 echo "SSH connection established successfully!"
     
     - name: Deploy to Server
       env:
