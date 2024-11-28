@@ -47,7 +47,7 @@ jobs:
         
         # Test SSH connection
         echo "Testing SSH connection to $SERVER_SSH_IP..."
-        ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=10 $SERVER_USER@$SERVER_SSH_IP echo "SSH connection established successfully!"
+        ssh -vvv -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP echo "SSH connection established successfully!"
     
     # Step 3: Deploy to Tomcat server
     - name: Deploy to Tomcat server
