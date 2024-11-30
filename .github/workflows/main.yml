@@ -48,8 +48,8 @@ jobs:
         echo "Check point 4"
 
         # Debug output
-         echo "Debug: known_hosts content:"
-         cat ~/.ssh/known_hosts
+        # echo "Debug: known_hosts content:"
+        # cat ~/.ssh/known_hosts
 
         echo "Check point 5"
         
