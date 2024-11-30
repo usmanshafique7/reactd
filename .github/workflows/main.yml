@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up SSH and test Connection
+      - name: Set up 1  SSH and test Connection
         env:
           SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
