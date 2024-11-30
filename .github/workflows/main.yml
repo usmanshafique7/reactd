@@ -14,7 +14,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Step 2: Set up SSH and test connection
+    # Step 2: Set up SSH and test Connection 
     - name: Set up SSH
       env:
         SERVER_SSH_IP: 182.183.2.96  # Public IP of your server (e.g., 182.183.2.96) ${{ secrets.SERVER_SSH_IP }}
