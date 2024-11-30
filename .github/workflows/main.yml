@@ -48,14 +48,14 @@ jobs:
         echo "Check point 4"
 
         # Debug output
-        # echo "Debug: known_hosts content:"
-        # cat ~/.ssh/known_hosts
+         echo "Debug: known_hosts content:"
+         cat ~/.ssh/known_hosts
 
         echo "Check point 5"
         
-        # Test SSH connection
-        # echo "Testing SSH connection to $SERVER_SSH_IP..."
-        # ssh -vvv -o StrictHostKeyChecking=no root@182.183.2.96 echo "SSH connection established successfully!"
+         Test SSH connection
+         echo "Testing SSH connection to $SERVER_SSH_IP..."
+         ssh -vvv -o StrictHostKeyChecking=no root@182.183.2.96 echo "SSH connection established successfully!"
 
         echo "Check point 6"
     
