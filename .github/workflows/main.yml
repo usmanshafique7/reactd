@@ -19,18 +19,24 @@ jobs:
           SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
         run: |
           echo "Setting up SSH..."
+
+          # Check if the private key is available
+          if [ -z "${SSH_PRIVATE_KEY}" ]; then
+            echo "ERROR: SSH private key is not set"
+            exit 1
+          fi
+
+          # Create SSH directory and set permissions
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+
+          # Add the server to known_hosts to prevent SSH fingerprint prompt
           ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
 
-      - name: Test SSH connection
-        env:
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-        run: |
-          echo "Testing SSH connection..."
-          ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP "echo 'SSH connection successful!'"
+          # Debug SSH configuration and test connection
+          echo "Testing SSH connection to $SERVER_SSH_IP..."
+          ssh -vvv -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP "echo 'SSH connection successful!'"
 
       - name: Deploy to Tomcat server
         env:
@@ -46,7 +52,7 @@ jobs:
 
           # Transfer the archive to the server
           echo "Uploading build archive..."
-          scp -o StrictHostKeyChecking=no build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
+          scp -v -o StrictHostKeyChecking=no build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
 
           # SSH into the server and deploy the app
           echo "Deploying application..."
