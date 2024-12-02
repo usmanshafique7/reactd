@@ -20,22 +20,18 @@ jobs:
         run: |
           echo "Setting up SSH..."
 
-          # Check if the private key is available
           if [ -z "${SSH_PRIVATE_KEY}" ]; then
-            echo "ERROR: SSH private key is not set"
+            echo "ERROR: SSH private key is missing!"
             exit 1
           fi
 
-          # Create SSH directory and set permissions
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Add the server to known_hosts to prevent SSH fingerprint prompt
           ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
-
-          # Debug SSH configuration and test connection
-          echo "Testing SSH connection to $SERVER_SSH_IP..."
+          
+          echo "Testing SSH connection..."
           ssh -vvv -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP "echo 'SSH connection successful!'"
 
       - name: Deploy to Tomcat server
@@ -47,27 +43,27 @@ jobs:
           echo "Starting deployment to Tomcat server..."
 
           # Compress the build directory
-          echo "Creating archive of build directory..."
+          echo "Creating build archive..."
           tar -czf build.tar.gz build/
 
-          # Transfer the archive to the server
-          echo "Uploading build archive..."
+          # Transfer the build archive to the server
+          echo "Transferring build archive to server..."
           scp -v -o StrictHostKeyChecking=no build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
 
           # SSH into the server and deploy the app
-          echo "Deploying application..."
+          echo "Deploying application to Tomcat..."
           ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP << EOF
             echo "Stopping Tomcat..."
-            sudo systemctl stop tomcat || echo "Tomcat not running"
+            sudo systemctl stop tomcat || echo "Failed to stop Tomcat. It may not be running."
 
-            echo "Cleaning old files..."
-            sudo rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/* || echo "No files to clean"
+            echo "Cleaning up old files..."
+            sudo rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/* || echo "No files to clean."
 
             echo "Extracting new files..."
-            sudo tar -xzf /tmp/build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT || exit 1
+            sudo tar -xzf /tmp/build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT || { echo "Extraction failed!"; exit 1; }
 
             echo "Starting Tomcat..."
-            sudo systemctl start tomcat || exit 1
+            sudo systemctl start tomcat || { echo "Failed to start Tomcat!"; exit 1; }
 
             echo "Deployment completed successfully!"
           EOF
