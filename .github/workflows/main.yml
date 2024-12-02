@@ -13,50 +13,55 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up SSH and test Connection
+      - name: Set up SSH
         env:
-          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
         run: |
           echo "Setting up SSH..."
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
-          ssh -T -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP
-          echo "SSH connection established successfully!"
+
+      - name: Test SSH connection
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+        run: |
+          echo "Testing SSH connection..."
+          ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP "echo 'SSH connection successful!'"
 
       - name: Deploy to Tomcat server
         env:
-          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
           TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
         run: |
           echo "Starting deployment to Tomcat server..."
 
-          # Create a tarball of the build directory
-          echo "Creating build archive..."
+          # Compress the build directory
+          echo "Creating archive of build directory..."
           tar -czf build.tar.gz build/
 
-          # Transfer the build archive to the server
-          echo "Transferring build archive to the server..."
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/home/$SERVER_USER/
+          # Transfer the archive to the server
+          echo "Uploading build archive..."
+          scp -o StrictHostKeyChecking=no build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
 
           # SSH into the server and deploy the app
-          echo "Deploying app to Tomcat..."
-          ssh -t -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_SSH_IP << EOF
+          echo "Deploying application..."
+          ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP << EOF
             echo "Stopping Tomcat..."
-            sudo systemctl stop tomcat
+            sudo systemctl stop tomcat || echo "Tomcat not running"
 
-            echo "Cleaning up old files..."
-            rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/*
+            echo "Cleaning old files..."
+            sudo rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/* || echo "No files to clean"
 
-            echo "Extracting new build files..."
-            tar -xzf build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT
+            echo "Extracting new files..."
+            sudo tar -xzf /tmp/build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT || exit 1
 
             echo "Starting Tomcat..."
-            sudo systemctl start tomcat
+            sudo systemctl start tomcat || exit 1
 
-            echo "Deployment completed!"
+            echo "Deployment completed successfully!"
           EOF
