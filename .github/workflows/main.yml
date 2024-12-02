@@ -10,21 +10,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-     
-      # Step 3: Build the project (optional - depending on your project)
-      - name: Build the project
+      - name: Set up SSH and test Connection
+        env:
+          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          echo "Building the project..."
-          # Add your build steps here (e.g., npm build for a React app)
-          # npm install
-          # npm run build
+          echo "Setting up SSH..."
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
+          ssh -T -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP
+          echo "SSH connection established successfully!"
 
-      # Step 4: Deploy to Tomcat server
-      - name: Deploy to Tomcat
+      - name: Deploy to Tomcat server
         env:
           SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
@@ -42,7 +45,7 @@ jobs:
 
           # SSH into the server and deploy the app
           echo "Deploying app to Tomcat..."
-          ssh -t -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP << EOF
+          ssh -t -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_SSH_IP << EOF
             echo "Stopping Tomcat..."
             sudo systemctl stop tomcat
 
