@@ -17,17 +17,16 @@ jobs:
       # Step 2: Set up SSH and test connection
       - name: Set up SSH and test connection
         env:
-          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
+         SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+         SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          echo "Setting up SSH..."
-          mkdir -p ~/.ssh
-          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
-          ssh -T -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP "echo 'SSH connection successful!'"
-
+         echo "Setting up SSH..."
+         mkdir -p ~/.ssh
+         echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+         chmod 600 ~/.ssh/id_rsa
+         ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
+         ssh -vvv -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP "echo 'SSH connection successful!'"
       # Step 3: Build the project (optional - depending on your project)
       - name: Build the project
         run: |
