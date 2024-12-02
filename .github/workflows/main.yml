@@ -10,60 +10,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up SSH
+      # Step 2: Set up SSH and test connection
+      - name: Set up SSH and test connection
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
           echo "Setting up SSH..."
-
-          if [ -z "${SSH_PRIVATE_KEY}" ]; then
-            echo "ERROR: SSH private key is missing!"
-            exit 1
-          fi
-
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
           ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
-          
-          echo "Testing SSH connection..."
-          ssh -vvv -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP "echo 'SSH connection successful!'"
+          ssh -T -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP "echo 'SSH connection successful!'"
 
-      - name: Deploy to Tomcat server
+      # Step 3: Build the project (optional - depending on your project)
+      - name: Build the project
+        run: |
+          echo "Building the project..."
+          # Add your build steps here (e.g., npm build for a React app)
+          # npm install
+          # npm run build
+
+      # Step 4: Deploy to Tomcat server
+      - name: Deploy to Tomcat
         env:
-          SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
           TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
         run: |
           echo "Starting deployment to Tomcat server..."
 
-          # Compress the build directory
+          # Create a tarball of the build directory
           echo "Creating build archive..."
           tar -czf build.tar.gz build/
 
           # Transfer the build archive to the server
-          echo "Transferring build archive to server..."
-          scp -v -o StrictHostKeyChecking=no build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
+          echo "Transferring build archive to the server..."
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/home/$SERVER_USER/
 
           # SSH into the server and deploy the app
-          echo "Deploying application to Tomcat..."
-          ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP << EOF
+          echo "Deploying app to Tomcat..."
+          ssh -t -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP << EOF
             echo "Stopping Tomcat..."
-            sudo systemctl stop tomcat || echo "Failed to stop Tomcat. It may not be running."
+            sudo systemctl stop tomcat
 
             echo "Cleaning up old files..."
-            sudo rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/* || echo "No files to clean."
+            rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/*
 
-            echo "Extracting new files..."
-            sudo tar -xzf /tmp/build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT || { echo "Extraction failed!"; exit 1; }
+            echo "Extracting new build files..."
+            tar -xzf build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT
 
             echo "Starting Tomcat..."
-            sudo systemctl start tomcat || { echo "Failed to start Tomcat!"; exit 1; }
+            sudo systemctl start tomcat
 
-            echo "Deployment completed successfully!"
+            echo "Deployment completed!"
           EOF
