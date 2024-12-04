@@ -16,6 +16,7 @@ jobs:
       - name: Set up SSH and test Connection
         env:
           SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+          SERVER_SSH_PORT: 2222
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
