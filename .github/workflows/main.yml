@@ -16,29 +16,31 @@ jobs:
       - name: Set up SSH private key
         run: |
           echo "Setting up SSH private key..."
-          
+
           # Ensure .ssh directory exists
           mkdir -p ~/.ssh
           
-          # Add SSH private key from GitHub secrets (Make sure you have added 'SSH_PRIVATE_KEY' in your GitHub secrets)
+          # Add SSH private key from GitHub secrets (Replace 'SSH_PRIVATE_KEY' with the actual secret name)
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
-          # Verify the private key file exists
-          ls -l ~/.ssh/id_rsa || echo "Private key not found"
           
+          # Verify private key permissions and contents
+          ls -l ~/.ssh/id_rsa || echo "Private key not found"
+          cat ~/.ssh/id_rsa || echo "Failed to display private key contents"
+
           # Add server to known_hosts
           echo "Adding server to known_hosts..."
           ssh-keyscan -H 182.183.2.96 >> ~/.ssh/known_hosts
           
-          # Debugging: Show contents of known_hosts
+          # Verify if known_hosts file is created correctly
+          ls -l ~/.ssh/known_hosts || echo "known_hosts file not created"
           cat ~/.ssh/known_hosts || echo "Known hosts not available"
 
       - name: Test SSH connection
         run: |
           echo "Testing SSH connection..."
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@182.183.2.96 "echo SSH connection successful!"
-
+          ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@182.183.2.96 "echo SSH connection successful!"
+        
       - name: Deploy to Tomcat
         run: |
           echo "Starting Tomcat deployment..."
