@@ -1,4 +1,4 @@
-name: Clear SSH and Deploy to Tomcat Server
+name: SSH Setup and Deploy to Tomcat Server
 
 on:
   push:
@@ -13,42 +13,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Clear SSH configuration
-        run: |
-          echo "Clearing previous SSH configurations..."
-          
-          # Remove old SSH keys and configuration
-          rm -rf ~/.ssh
-          
-          # Ensure directory is recreated
-          mkdir -p ~/.ssh
-          
-          # Clean known hosts if needed
-          rm -f ~/.ssh/known_hosts
-          
-          echo "SSH configuration cleared."
-
       - name: Set up SSH key
         run: |
           echo "Setting up SSH private key..."
           
-          # Add SSH private key from GitHub secrets
+          # Ensure .ssh directory exists
+          mkdir -p ~/.ssh
+          
+          # Add SSH private key from GitHub secrets (Replace 'YOUR_PRIVATE_KEY' with the actual secret name)
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
-          # Debug: Verify the private key file exists
-          ls -l ~/.ssh/id_rsa || echo "Private key not found"
           
-          # Add server to known_hosts and debug
+          # Add server to known_hosts
           echo "Adding server to known_hosts..."
-          ssh-keyscan -H 182.183.2.96 >> ~/.ssh/known_hosts 2>&1
+          ssh-keyscan -H 182.183.2.96 >> ~/.ssh/known_hosts
           
-          # Debug: Show contents of known_hosts
+          # Debugging: Show contents of known_hosts
           cat ~/.ssh/known_hosts || echo "Known hosts not available"
 
-      - name: Test SSH Connection
+      - name: Test SSH connection
         run: |
           echo "Testing SSH connection..."
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@182.183.2.96 "echo SSH connection successful!"
 
-      # After SSH is working, continue with your Tomcat deployment steps
+      # You can add the Tomcat deployment steps after the SSH connection is verified
+      - name: Deploy to Tomcat
+        run: |
+          echo "Starting Tomcat deployment..."
+          # Your Tomcat deployment steps go here (e.g., copying WAR file, starting Tomcat, etc.)
