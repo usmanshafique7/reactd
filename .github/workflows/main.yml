@@ -3,45 +3,50 @@ name: SSH Deployment
 on:
   push:
     branches:
-      - main  # Trigger on pushes to the main branch
+      - main  # Replace with the branch you want to trigger the workflow
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code
+      # Step 1: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
 
       # Step 2: Set up SSH
       - name: Setting up SSH
         run: |
+          set -x  # Enable debugging output
           echo "Setting up SSH..."
           mkdir -p ~/.ssh
-          # Use printf to handle private key properly
-          printf "%s" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          # Ensure the server's public key is added to known_hosts
+          echo "Adding server public key to known_hosts..."
           ssh-keyscan -H ${{ secrets.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
-          cat ~/.ssh/id_ed25519  # Debugging: Show the private key contents
+          cat ~/.ssh/id_ed25519  # Debugging: Show private key contents
+          cat ~/.ssh/known_hosts  # Debugging: Show the known hosts
 
-      # Step 3: Verify SSH Key (Optional step to display key)
-      - name: Verify SSH Key
-        run: cat ~/.ssh/id_ed25519
-
-      # Step 4: Test SSH connection with detailed debugging
+      # Step 3: Test SSH connection
       - name: Test SSH connection
         run: |
           echo "Testing SSH connection..."
-          ssh -vvv -T -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }}
+          ssh -vvv -T -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }}
+          echo "SSH connection established successfully!"
 
-      # Step 5: Run deployment commands (with debugging)
+      # Step 4: Deploy or run commands on the server
       - name: Run deployment commands
         run: |
           echo "Running deployment commands..."
-          ssh -vvv -i ~/.ssh/id_ed25519 -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} << 'EOF'
+          ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} << 'EOF'
           echo "Deploying application..."
+          # Add your deployment commands here
           whoami
           ls -la /path/to/project
           EOF
+
+    env:
+      SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}        # Set in GitHub Secrets
+      SERVER_SSH_PORT: 2222                             # Port set to 2222
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}    # Set in GitHub Secrets
+      SERVER_USER: ${{ secrets.SERVER_USER }}            # Set in GitHub Secrets
