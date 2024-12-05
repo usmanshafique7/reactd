@@ -36,10 +36,10 @@ jobs:
       - name: Test SSH connection
         run: |
           echo "Testing SSH connection..."
-          ssh -vvv -T -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }}
+          ssh -v -T -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }}
           echo "SSH connection established successfully!"
 
-      # Step 4: Deploy or run commands on the server
+      # Step 4: Run deployment commands on the server
       - name: Run deployment commands
         run: |
           echo "Running deployment commands..."
