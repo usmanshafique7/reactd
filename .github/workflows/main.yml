@@ -1,48 +1,24 @@
-name: SSH Deployment
+name: Example GitHub Action
 
 on:
   push:
     branches:
-      - main  # Replace with the branch you want to trigger the workflow
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      # Step 2: Set up SSH
-      - name: Setting up SSH
-        run: |
-          echo "Setting up SSH..."
-          mkdir -p ~/.ssh
-          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
+    - name: Set up SSH key for GitHub
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Step 3: Test SSH connection
-      - name: Test SSH connection
-        run: |
-          echo "Testing SSH connection..."
-          ssh -vvv -T -o StrictHostKeyChecking=no -p $SERVER_SSH_PORT $SERVER_USER@$SERVER_SSH_IP
-          echo "SSH connection established successfully!"
-
-      # Step 4: Deploy or run commands on the server
-      - name: Run deployment commands
-        run: |
-          echo "Running deployment commands..."
-          ssh -i ~/.ssh/id_ed25519 -p $SERVER_SSH_PORT $SERVER_USER@$SERVER_SSH_IP << 'EOF'
-          echo "Deploying application..."
-          # Add your deployment commands here
-          whoami
-          ls -la /path/to/project
-          EOF
-
-    env:
-      SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}        # Set in GitHub Secrets
-      SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}    # Set in GitHub Secrets
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}    # Set in GitHub Secrets
-      SERVER_USER: ${{ secrets.SERVER_USER }}            # Set in GitHub Secrets
+    - name: Run deployment script
+      run: |
+        # Now you can run commands that require SSH access, such as cloning a repo
+        git clone git@github.com:usmanshafique7/reactd.git
