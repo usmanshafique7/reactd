@@ -1,4 +1,4 @@
-name: SSH Setup and Deploy to Tomcat Server
+name: Deploy to Tomcat
 
 on:
   push:
@@ -10,38 +10,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Set up SSH private key
+      - name: Set up SSH and test Connection
+        env:
+          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+          SERVER_SSH_PORT: 2222
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          echo "Setting up SSH private key..."
+          echo "Setting up SSH..."
 
-          # Ensure .ssh directory exists
+          # Ensure the .ssh directory exists
           mkdir -p ~/.ssh
           
-          # Add SSH private key from GitHub secrets (Replace 'SSH_PRIVATE_KEY' with the actual secret name)
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          # Add the SSH private key
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
-          # Verify private key permissions and contents
+
+          # Debug: Verify the private key exists
           ls -l ~/.ssh/id_rsa || echo "Private key not found"
-          cat ~/.ssh/id_rsa || echo "Failed to display private key contents"
+          cat ~/.ssh/id_rsa || echo "Private key is empty or not accessible"
 
-          # Add server to known_hosts
+          # Add the server's SSH key to known_hosts to avoid prompt
           echo "Adding server to known_hosts..."
-          ssh-keyscan -H 182.183.2.96 >> ~/.ssh/known_hosts
-          
-          # Verify if known_hosts file is created correctly
-          ls -l ~/.ssh/known_hosts || echo "known_hosts file not created"
-          cat ~/.ssh/known_hosts || echo "Known hosts not available"
+          ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
 
-      - name: Test SSH connection
-        run: |
+          # Debug: Check if the known_hosts file was created
+          ls -l ~/.ssh/known_hosts || echo "known_hosts file not found"
+          cat ~/.ssh/known_hosts || echo "Failed to add server to known_hosts"
+
+          # Test SSH connection
           echo "Testing SSH connection..."
-          ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@182.183.2.96 "echo SSH connection successful!"
-        
-      - name: Deploy to Tomcat
-        run: |
-          echo "Starting Tomcat deployment..."
-          # Your Tomcat deployment steps go here (e.g., copying WAR file, restarting Tomcat, etc.)
+          ssh -T -o StrictHostKeyChecking=no -p $SERVER_SSH_PORT $SERVER_USER@$SERVER_SSH_IP "echo SSH connection successful!"
+
+          echo "SSH connection established successfully!"
