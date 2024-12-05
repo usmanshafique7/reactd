@@ -19,29 +19,29 @@ jobs:
         run: |
           echo "Setting up SSH..."
           mkdir -p ~/.ssh
-          # Use printf to properly handle the private key
+          # Use printf to handle private key properly
           printf "%s" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          # Use ssh-keyscan to add the server's public key to known_hosts
+          # Ensure the server's public key is added to known_hosts
           ssh-keyscan -H ${{ secrets.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
+          cat ~/.ssh/id_ed25519  # Debugging: Show the private key contents
 
-      # Step 3: Verify SSH Key (Print the key to check it's correctly set up)
+      # Step 3: Verify SSH Key (Optional step to display key)
       - name: Verify SSH Key
         run: cat ~/.ssh/id_ed25519
 
-      # Step 4: Test SSH connection (with verbose output)
+      # Step 4: Test SSH connection with detailed debugging
       - name: Test SSH connection
         run: |
           echo "Testing SSH connection..."
           ssh -vvv -T -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }}
 
-      # Step 5: Run deployment commands
+      # Step 5: Run deployment commands (with debugging)
       - name: Run deployment commands
         run: |
           echo "Running deployment commands..."
-          ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} << 'EOF'
+          ssh -vvv -i ~/.ssh/id_ed25519 -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} << 'EOF'
           echo "Deploying application..."
-          # Add your deployment commands here
           whoami
           ls -la /path/to/project
           EOF
