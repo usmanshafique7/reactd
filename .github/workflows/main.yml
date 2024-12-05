@@ -1,4 +1,4 @@
-name: SSH Setup and Connection
+name: SSH Setup and Connections
 
 on: 
   push:
