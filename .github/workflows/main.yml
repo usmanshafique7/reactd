@@ -35,6 +35,7 @@ jobs:
     - name: Test SSH Connection
       run: |
         echo "Testing SSH Connection..."
-        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no root@182.183.2.96 "echo SSH connection successful!"
+        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no root@182.183.2.96 -v
+
       env:
         SERVER_SSH_IP: 182.183.2.96
