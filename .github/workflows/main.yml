@@ -13,16 +13,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up SSH key
+      - name: Set up SSH private key
         run: |
           echo "Setting up SSH private key..."
           
           # Ensure .ssh directory exists
           mkdir -p ~/.ssh
           
-          # Add SSH private key from GitHub secrets (Replace 'YOUR_PRIVATE_KEY' with the actual secret name)
+          # Add SSH private key from GitHub secrets (Make sure you have added 'SSH_PRIVATE_KEY' in your GitHub secrets)
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+
+          # Verify the private key file exists
+          ls -l ~/.ssh/id_rsa || echo "Private key not found"
           
           # Add server to known_hosts
           echo "Adding server to known_hosts..."
@@ -36,8 +39,7 @@ jobs:
           echo "Testing SSH connection..."
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no root@182.183.2.96 "echo SSH connection successful!"
 
-      # You can add the Tomcat deployment steps after the SSH connection is verified
       - name: Deploy to Tomcat
         run: |
           echo "Starting Tomcat deployment..."
-          # Your Tomcat deployment steps go here (e.g., copying WAR file, starting Tomcat, etc.)
+          # Your Tomcat deployment steps go here (e.g., copying WAR file, restarting Tomcat, etc.)
