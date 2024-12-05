@@ -1,47 +1,48 @@
-name: Deploy to Server
+name: SSH Deployment
 
 on:
   push:
     branches:
-      - main
+      - main  # Replace with the branch you want to trigger the workflow
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # Step 1: Checkout the code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SSH and test Connection
-        env:
-          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-          SERVER_SSH_PORT: 2222
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_USER: root
+      # Step 2: Set up SSH
+      - name: Setting up SSH
         run: |
           echo "Setting up SSH..."
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H $SERVER_SSH_IP >> ~/.ssh/known_hosts
+
+      # Step 3: Test SSH connection
+      - name: Test SSH connection
+        run: |
           echo "Testing SSH connection..."
           ssh -vvv -T -o StrictHostKeyChecking=no -p $SERVER_SSH_PORT $SERVER_USER@$SERVER_SSH_IP
           echo "SSH connection established successfully!"
 
-      - name: Deploy Application
-        env:
-          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-          SERVER_SSH_PORT: 2222
-          SERVER_USER: root
+      # Step 4: Deploy or run commands on the server
+      - name: Run deployment commands
         run: |
+          echo "Running deployment commands..."
+          ssh -i ~/.ssh/id_ed25519 -p $SERVER_SSH_PORT $SERVER_USER@$SERVER_SSH_IP << 'EOF'
           echo "Deploying application..."
-          scp -P $SERVER_SSH_PORT -o StrictHostKeyChecking=no build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp
-          ssh -t -p $SERVER_SSH_PORT -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_SSH_IP << EOF
-            echo "Stopping application..."
-            sudo systemctl stop app
-            echo "Deploying new build..."
-            tar -xzf /tmp/build.tar.gz -C /path/to/deploy/
-            echo "Starting application..."
-            sudo systemctl start app
+          # Add your deployment commands here
+          whoami
+          ls -la /path/to/project
           EOF
+
+    env:
+      SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}        # Set in GitHub Secrets
+      SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}    # Set in GitHub Secrets
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}    # Set in GitHub Secrets
+      SERVER_USER: ${{ secrets.SERVER_USER }}            # Set in GitHub Secrets
