@@ -15,7 +15,6 @@ jobs:
 
     - name: Set up SSH
       run: |
-        set -x  # Enable debugging output
         echo "Setting up SSH..."
         
         # Create .ssh directory if it doesn't exist
@@ -33,14 +32,10 @@ jobs:
         eval "$(ssh-agent -s)"
         ssh-add ~/.ssh/id_ed25519
 
-        # Debug: Show the private key contents and known hosts file
-        cat ~/.ssh/id_ed25519
-        cat ~/.ssh/known_hosts
-
     - name: Test SSH Connection
       run: |
         echo "Testing SSH Connection..."
-        ssh -i ~/.ssh/id_ed25519 -p 2222 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} -v "echo SSH connection successful!"
+        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} "echo SSH connection successful!"
       env:
         SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
         SERVER_USER: ${{ secrets.SERVER_USER }}
