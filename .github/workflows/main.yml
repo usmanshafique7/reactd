@@ -1,57 +1,44 @@
-name: SSH Deployment
+name: SSH Setup and Connection
 
-on:
+on: 
   push:
     branches:
-      - main  # Replace with the branch you want to trigger the workflow
+      - main
 
 jobs:
-  deploy:
+  setup-ssh:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      # Step 2: Set up SSH
-      - name: Setting up SSH
-        run: |
-          set -x  # Enable debugging output
-          echo "Setting up SSH..."
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          
-          # Manually add the server public key to known_hosts
-          # You can obtain this key from your local machine by running: ssh-keyscan -H <your-server-ip>
-          echo "Adding server public key to known_hosts..."
-          ssh-keyscan -H ${{ secrets.SERVER_SSH_IP }} -p ${{ secrets.SERVER_SSH_PORT }} >> ~/.ssh/known_hosts
-          
-          # Debugging: Show the private key contents and known hosts file
-          cat ~/.ssh/id_ed25519
-          cat ~/.ssh/known_hosts
+    - name: Set up SSH
+      run: |
+        set -x  # Enable debugging output
+        echo "Setting up SSH..."
+        
+        # Create .ssh directory if it doesn't exist
+        mkdir -p ~/.ssh
+        
+        # Add the SSH private key to the id_ed25519 file
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
 
-      # Step 3: Test SSH connection
-      - name: Test SSH connection
-        run: |
-          echo "Testing SSH connection..."
-          ssh -v -T -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }}
-          echo "SSH connection established successfully!"
+        # Add the server's public key to known_hosts
+        echo "Adding server public key to known_hosts..."
+        ssh-keyscan -H -p 2222 ${{ secrets.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
 
-      # Step 4: Run deployment commands on the server
-      - name: Run deployment commands
-        run: |
-          echo "Running deployment commands..."
-          ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} << 'EOF'
-          echo "Deploying application..."
-          # Add your deployment commands here
-          whoami
-          ls -la /path/to/project
-          EOF
+        # Debug: Show the private key contents and known hosts file
+        cat ~/.ssh/id_ed25519
+        cat ~/.ssh/known_hosts
 
-    env:
-      SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}        # Set in GitHub Secrets
-      SERVER_SSH_PORT: 2222                             # Port set to 2222
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}    # Set in GitHub Secrets
-      SERVER_USER: ${{ secrets.SERVER_USER }}            # Set in GitHub Secrets
+    - name: Test SSH Connection
+      run: |
+        echo "Testing SSH Connection..."
+        ssh -i ~/.ssh/id_ed25519 -p 2222 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} "echo SSH connection successful!"
+
+      env:
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
