@@ -1,24 +1,45 @@
-name: Example GitHub Action
+name: SSH Deployment
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger on pushes to the main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up SSH key for GitHub
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      # Step 2: Set up SSH
+      - name: Setting up SSH
+        run: |
+          echo "Setting up SSH..."
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
 
-    - name: Run deployment script
-      run: |
-        # Now you can run commands that require SSH access, such as cloning a repo
-        git clone git@github.com:usmanshafique7/reactd.git
+      # Step 3: Verify SSH Key (Print the key to check it's correctly set up)
+      - name: Verify SSH Key
+        run: cat ~/.ssh/id_ed25519
+
+      # Step 4: Test SSH connection (with verbose output)
+      - name: Test SSH connection
+        run: |
+          echo "Testing SSH connection..."
+          ssh -vvv -T -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }}
+
+      # Step 5: Run deployment commands
+      - name: Run deployment commands
+        run: |
+          echo "Running deployment commands..."
+          ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SERVER_SSH_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} << 'EOF'
+          echo "Deploying application..."
+          # Add your deployment commands here
+          whoami
+          ls -la /path/to/project
+          EOF
