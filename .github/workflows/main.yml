@@ -40,6 +40,7 @@ jobs:
     - name: Transfer build archive to the server
       run: |
         echo "Transferring build archive to the server..."
+        echo $SERVER_USER@$SERVER_SSH_IP
         scp -P 2222 build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
 
     - name: Deploying application to Tomcat
