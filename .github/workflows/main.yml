@@ -39,6 +39,11 @@ jobs:
           exit 1
         fi
 
+    - name: Debug SSH Variables
+      run: |
+        echo "Server User: $SERVER_USER"
+        echo "Server IP: $SERVER_SSH_IP"
+
     - name: Transfer build archive to the server
       run: |
         echo "Transferring build archive to the server..."
