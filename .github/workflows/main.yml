@@ -26,7 +26,7 @@ jobs:
 
         # Add the server's public key to known_hosts
         echo "Adding server public key to known_hosts..."
-        ssh-keyscan -H -p 2222 182.183.2.96 >> ~/.ssh/known_hosts
+        ssh-keyscan -H -p 2222 ${{ secrets.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
 
         # Use ssh-agent to load the private key
         eval "$(ssh-agent -s)"
@@ -35,33 +35,48 @@ jobs:
     - name: Test SSH Connection
       run: |
         echo "Testing SSH Connection..."
-        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey root@182.183.2.96 -v
+        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} -v
         echo "done done done"
       env:
-        SERVER_SSH_IP: 182.183.2.96
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
 
-    - name: Build and Deploy to Tomcat
-      env:
-          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
+    - name: Build application
       run: |
-        echo "Starting deployment to Tomcat server..."
-        
-        # Step 1: Install dependencies and build the project
-        echo "Building the project..."
         npm install
         npm run build
 
-        # Step 2: Create a tarball of the build directory
-        echo "Creating build archive..."
-        tar -czf build.tar.gz build/
+    - name: Package build
+      run: |
+        if [ ! -d "build" ]; then
+            echo "Error: build directory not found!"
+            exit 1
+        fi
+        tar -cvf build.tar.gz build
 
-        # Step 3: Transfer the build archive to the server
+    - name: Deploy to Tomcat server
+      env:
+        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
+      run: |
         echo "Transferring build archive to the server..."
-        scp -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/home/$SERVER_USER/build.tar.gz
+        
+        # Use /tmp as a temporary directory for the transfer
+        scp -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/build.tar.gz
 
-        # Step 4: SSH into the server and deploy the application
         echo "Deploying application to Tomcat..."
         ssh -p 2222 -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_SSH_IP << EOF
-          echo "
+          echo "Stopping Tomcat server..."
+          sudo systemctl stop tomcat
+
+          echo "Cleaning up old files..."
+          sudo rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/*
+
+          echo "Extracting new build files..."
+          sudo tar -xzf /tmp/build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT
+
+          echo "Starting Tomcat server..."
+          sudo systemctl start tomcat
+
+          echo "Deployment completed successfully!"
+        EOF
