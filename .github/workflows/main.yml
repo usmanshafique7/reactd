@@ -39,3 +39,37 @@ jobs:
         echo "done done done"
       env:
         SERVER_SSH_IP: 182.183.2.96
+    - name: Deploy to Tomcat server
+      env:
+          SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
+      run: |
+          echo "Starting deployment to Tomcat server..."
+
+          # Create a tarball of the build directory
+          echo "Creating build archive..."
+          tar -czf build.tar.gz build/
+
+          # Transfer the build archive to the server
+          echo "Transferring build archive to the server..."
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/home/$SERVER_USER/
+
+          # SSH into the server and deploy the app
+          echo "Deploying app to Tomcat..."
+          ssh -t -o StrictHostKeyChecking=no -o ConnectTimeout=60 -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_SSH_IP << EOF
+            echo "Stopping Tomcat..."
+            sudo systemctl stop tomcat
+
+            echo "Cleaning up old files..."
+            rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/*
+
+            echo "Extracting new build files..."
+            tar -xzf build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT
+
+            echo "Starting Tomcat..."
+            sudo systemctl start tomcat
+
+            echo "Deployment completed!"
+          EOF
+
