@@ -3,33 +3,22 @@ name: Deploy to Tomcat Server
 on:
   push:
     branches:
-      - main  # Trigger deployment on push to the main branch (adjust if needed)
+      - main
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Use Ubuntu 24.04 (as per GitHub Actions update)
+    runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Setup SSH keys for secure connection
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    # Step 2: Checkout repository
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    # Step 3: Install dependencies and build the application
     - name: Build the project (if needed)
       run: |
-        # If your project is a React or Node.js app, run the build command
-        # Example: npm install && npm run build (adjust as needed)
-        echo "Running build process..."
+        # Assuming you're using npm (adjust according to your project type)
         npm install
         npm run build
 
-    # Step 4: Check if build directory exists
     - name: Check if build directory exists
       run: |
         if [ ! -d "build" ]; then
@@ -37,9 +26,38 @@ jobs:
           exit 1
         fi
 
-    # Step 5: Create a tarball of the build directory
     - name: Create build tarball
       run: |
         echo "Creating build tarball..."
         tar -czf build.tar.gz -C build .
-        echo "Build arch
+        echo "Build archive created successfully."
+
+    - name: Check if build.tar.gz exists
+      run: |
+        if [ ! -f build.tar.gz ]; then
+          echo "build.tar.gz does not exist!"
+          exit 1
+        fi
+
+    - name: Transfer build archive to the server
+      run: |
+        echo "Transferring build archive to the server..."
+        scp -P 2222 build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
+
+    - name: Deploy application to Tomcat
+      run: |
+        echo "Deploying application to Tomcat..."
+        ssh -p 2222 $SERVER_USER@$SERVER_SSH_IP << 'EOF'
+          # Stop Tomcat server
+          sudo systemctl stop tomcat
+
+          # Clean up old files in the Tomcat ROOT directory
+          sudo rm -rf /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/*
+
+          # Extract the new build files from the tarball
+          sudo tar -xzf /tmp/build.tar.gz -C /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/
+
+          # Start Tomcat server
+          sudo systemctl start tomcat
+        EOF
+        echo "Deployment completed successfully!"
