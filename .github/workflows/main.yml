@@ -35,7 +35,7 @@ jobs:
     - name: Add SSH key to known hosts
       run: |
         mkdir -p ~/.ssh
-        ssh-keyscan -p 2222 $SERVER_SSH_IP >> ~/.ssh/known_hosts
+        ssh-keyscan -p 2222 182.183.2.96 >> ~/.ssh/known_hosts
 
     - name: Transfer build archive to the server
       run: |
