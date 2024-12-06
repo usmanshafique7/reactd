@@ -16,11 +16,20 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    # Step 2: Checkout the repository (if you need to clone it)
+    # Step 2: Checkout repository
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    # Step 3: Ensure the build directory exists
+    # Step 3: Install dependencies and build the application
+    - name: Build the project (if needed)
+      run: |
+        # If your project is a React or Node.js app, run the build command
+        # Example: npm install && npm run build (adjust as needed)
+        echo "Running build process..."
+        npm install
+        npm run build
+
+    # Step 4: Check if build directory exists
     - name: Check if build directory exists
       run: |
         if [ ! -d "build" ]; then
@@ -28,42 +37,9 @@ jobs:
           exit 1
         fi
 
-    # Step 4: Create a tarball of the build directory
+    # Step 5: Create a tarball of the build directory
     - name: Create build tarball
       run: |
         echo "Creating build tarball..."
         tar -czf build.tar.gz -C build .
-        echo "Build archive created successfully."
-
-    # Step 5: Check if the tarball file exists before proceeding
-    - name: Check if build.tar.gz exists
-      run: |
-        if [ ! -f build.tar.gz ]; then
-          echo "build.tar.gz does not exist!"
-          exit 1
-        fi
-
-    # Step 6: Transfer the tarball to the server using SCP
-    - name: Transfer build archive to the server
-      run: |
-        echo "Transferring build archive to the server..."
-        scp -P 2222 build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
-    
-    # Step 7: Deploy the tarball on the remote Tomcat server
-    - name: Deploy application to Tomcat
-      run: |
-        echo "Deploying application to Tomcat..."
-        ssh -p 2222 $SERVER_USER@$SERVER_SSH_IP << 'EOF'
-          # Stop Tomcat server
-          sudo systemctl stop tomcat
-
-          # Clean up old files in the Tomcat ROOT directory
-          sudo rm -rf /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/*
-
-          # Extract the new build files from the tarball
-          sudo tar -xzf /tmp/build.tar.gz -C /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/
-
-          # Start Tomcat server
-          sudo systemctl start tomcat
-        EOF
-        echo "Deployment completed successfully!"
+        echo "Build arch
