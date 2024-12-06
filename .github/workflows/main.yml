@@ -1,4 +1,4 @@
-name: Deploy to Tomcat Server
+name: Deploy Build to Tomcat
 
 on:
   push:
@@ -13,48 +13,47 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Build the project (if needed)
+    - name: Install dependencies
       run: |
-        npm install
-        npm run build
+        # Install any necessary dependencies for your build process
+        sudo apt-get update
+        sudo apt-get install -y build-essential
 
-    - name: Check if build directory exists
+    - name: Build project
       run: |
+        # Example build command; replace with your actual build process
         if [ ! -d "build" ]; then
           echo "Build directory does not exist!"
           exit 1
         fi
-
-    - name: Create build tarball
-      run: |
         echo "Creating build tarball..."
         tar -czf build.tar.gz -C build .
-        echo "Build archive created successfully."
 
-    - name: Check if build.tar.gz exists
+    - name: Add SSH key to known hosts
       run: |
-        if [ ! -f build.tar.gz ]; then
-          echo "build.tar.gz does not exist!"
-          exit 1
-        fi
-
-    - name: Debug SSH Variables
-      run: |
-        echo "Server User: root"
-        echo "Server IP: 182.183.2.96"
+        mkdir -p ~/.ssh
+        ssh-keyscan -p 2222 $SERVER_SSH_IP >> ~/.ssh/known_hosts
 
     - name: Transfer build archive to the server
       run: |
         echo "Transferring build archive to the server..."
-        scp -P 2222 build.tar.gz root@182.183.2.96:/tmp/
+        scp -P 2222 build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
 
-    - name: Deploy application to Tomcat
+    - name: Deploying application to Tomcat
       run: |
         echo "Deploying application to Tomcat..."
-        ssh -p 2222 root@182.183.2.96 << 'EOF'
+        ssh -p 2222 $SERVER_USER@$SERVER_SSH_IP << EOF
+          echo "Stopping Tomcat server..."
           sudo systemctl stop tomcat
+          
+          echo "Cleaning up old files..."
           sudo rm -rf /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/*
-          sudo tar -xzf /tmp/build.tar.gz -C /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/
+          
+          echo "Extracting new build files..."
+          sudo tar -xzf /tmp/build.tar.gz -C /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT
+          
+          echo "Starting Tomcat server..."
           sudo systemctl start tomcat
+          
+          echo "Deployment completed successfully!"
         EOF
-        echo "Deployment completed successfully!"
