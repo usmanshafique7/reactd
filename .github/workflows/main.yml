@@ -13,18 +13,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Set up Node.js (if using React or similar)
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'  # Adjust to the version you need
+
     - name: Install dependencies
       run: |
-        # Install any necessary dependencies for your build process
-        sudo apt-get update
-        sudo apt-get install -y build-essential
+        npm install
 
     - name: Build project
       run: |
-        # Example build command; replace with your actual build process
+        # Build your project and create the build directory
         if [ ! -d "build" ]; then
-          echo "Build directory does not exist!"
-          exit 1
+          echo "Build directory does not exist, creating it..."
+          npm run build  # Adjust this to the actual build command for your project
         fi
         echo "Creating build tarball..."
         tar -czf build.tar.gz -C build .
