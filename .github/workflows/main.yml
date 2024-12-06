@@ -1,6 +1,6 @@
 name: SSH Setup and Connection
 
-on: 
+on:
   push:
     branches:
       - main
@@ -35,8 +35,7 @@ jobs:
     - name: Test SSH Connection
       run: |
         echo "Testing SSH Connection..."
-        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no root@182.183.2.96 -v
-        echo "done dona done"
-
+        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey root@182.183.2.96 -v
+        echo "done done done"
       env:
         SERVER_SSH_IP: 182.183.2.96
