@@ -41,7 +41,7 @@ jobs:
       run: |
         echo "Transferring build archive to the server..."
         echo root@182.183.2.96
-        scp -P 2222 build.tar.gz root@182.183.2.96:/tmp/
+        scp -P 2222 -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 build.tar.gz root@182.183.2.96:/tmp/
 
     - name: Deploying application to Tomcat
       run: |
