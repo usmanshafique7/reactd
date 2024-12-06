@@ -15,7 +15,6 @@ jobs:
 
     - name: Build the project (if needed)
       run: |
-        # Assuming you're using npm (adjust according to your project type)
         npm install
         npm run build
 
@@ -41,28 +40,21 @@ jobs:
 
     - name: Debug SSH Variables
       run: |
-        echo "Server User: $SERVER_USER"
-        echo "Server IP: $SERVER_SSH_IP"
+        echo "Server User: root"
+        echo "Server IP: 182.183.2.96"
 
     - name: Transfer build archive to the server
       run: |
         echo "Transferring build archive to the server..."
-        scp -P 2222 build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
+        scp -P 2222 build.tar.gz root@182.183.2.96:/tmp/
 
     - name: Deploy application to Tomcat
       run: |
         echo "Deploying application to Tomcat..."
-        ssh -p 2222 $SERVER_USER@$SERVER_SSH_IP << 'EOF'
-          # Stop Tomcat server
+        ssh -p 2222 root@182.183.2.96 << 'EOF'
           sudo systemctl stop tomcat
-
-          # Clean up old files in the Tomcat ROOT directory
           sudo rm -rf /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/*
-
-          # Extract the new build files from the tarball
           sudo tar -xzf /tmp/build.tar.gz -C /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/
-
-          # Start Tomcat server
           sudo systemctl start tomcat
         EOF
         echo "Deployment completed successfully!"
