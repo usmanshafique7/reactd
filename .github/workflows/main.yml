@@ -36,6 +36,7 @@ jobs:
       run: |
         echo "Testing SSH Connection..."
         ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no root@182.183.2.96 -v
+        echo "done dona done"
 
       env:
         SERVER_SSH_IP: 182.183.2.96
