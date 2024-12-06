@@ -1,85 +1,69 @@
-name: SSH Setup and Connection
+name: Deploy to Tomcat Server
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger deployment on push to the main branch (adjust if needed)
 
 jobs:
-  setup-ssh:
-    runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest  # Use Ubuntu 24.04 (as per GitHub Actions update)
 
     steps:
+    # Step 1: Setup SSH keys for secure connection
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    # Step 2: Checkout the repository (if you need to clone it)
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up SSH
-      run: |
-        echo "Setting up SSH..."
-        
-        # Create .ssh directory if it doesn't exist
-        mkdir -p ~/.ssh
-        
-        # Add the private key from GitHub Secrets
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-
-        # Add the server's public key to known_hosts
-        echo "Adding server public key to known_hosts..."
-        ssh-keyscan -H -p 2222 ${{ secrets.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
-
-        # Use ssh-agent to load the private key
-        eval "$(ssh-agent -s)"
-        ssh-add ~/.ssh/id_ed25519
-
-    - name: Test SSH Connection
-      run: |
-        echo "Testing SSH Connection..."
-        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_SSH_IP }} -v
-        echo "done done done"
-      env:
-        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-
-    - name: Build application
-      run: |
-        npm install
-        npm run build
-
-    - name: Package build
+    # Step 3: Ensure the build directory exists
+    - name: Check if build directory exists
       run: |
         if [ ! -d "build" ]; then
-            echo "Error: build directory not found!"
-            exit 1
+          echo "Build directory does not exist!"
+          exit 1
         fi
-        tar -cvf build.tar.gz build
 
-    - name: Deploy to Tomcat server
-      env:
-        SERVER_SSH_IP: ${{ secrets.SERVER_SSH_IP }}
-        SERVER_USER: ${{ secrets.SERVER_USER }}
-        TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
+    # Step 4: Create a tarball of the build directory
+    - name: Create build tarball
+      run: |
+        echo "Creating build tarball..."
+        tar -czf build.tar.gz -C build .
+        echo "Build archive created successfully."
+
+    # Step 5: Check if the tarball file exists before proceeding
+    - name: Check if build.tar.gz exists
+      run: |
+        if [ ! -f build.tar.gz ]; then
+          echo "build.tar.gz does not exist!"
+          exit 1
+        fi
+
+    # Step 6: Transfer the tarball to the server using SCP
+    - name: Transfer build archive to the server
       run: |
         echo "Transferring build archive to the server..."
-        
-        # Use /tmp as a temporary directory for the transfer
-        scp -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/build.tar.gz
-
+        scp -P 2222 build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/
+    
+    # Step 7: Deploy the tarball on the remote Tomcat server
+    - name: Deploy application to Tomcat
+      run: |
         echo "Deploying application to Tomcat..."
-        ssh -p 2222 -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_SSH_IP << EOF
-          echo "Stopping Tomcat server..."
+        ssh -p 2222 $SERVER_USER@$SERVER_SSH_IP << 'EOF'
+          # Stop Tomcat server
           sudo systemctl stop tomcat
 
-          echo "Cleaning up old files..."
-          sudo rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/*
+          # Clean up old files in the Tomcat ROOT directory
+          sudo rm -rf /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/*
 
-          echo "Extracting new build files..."
-          # Correct extraction to target Tomcat webapp directory
-          sudo tar -xzf /tmp/build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT
+          # Extract the new build files from the tarball
+          sudo tar -xzf /tmp/build.tar.gz -C /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/
 
-          echo "Starting Tomcat server..."
+          # Start Tomcat server
           sudo systemctl start tomcat
-
-          echo "Deployment completed successfully!"
-          # Remove temporary build archive
-          sudo rm /tmp/build.tar.gz
         EOF
+        echo "Deployment completed successfully!"
