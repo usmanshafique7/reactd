@@ -16,11 +16,19 @@ jobs:
     - name: Set up SSH
       run: |
         echo "Setting up SSH..."
+        
+        # Create .ssh directory if it doesn't exist
         mkdir -p ~/.ssh
+        
+        # Add the private key from GitHub Secrets
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
+
+        # Add the server's public key to known_hosts
         echo "Adding server public key to known_hosts..."
         ssh-keyscan -H -p 2222 ${{ secrets.SERVER_SSH_IP }} >> ~/.ssh/known_hosts
+
+        # Use ssh-agent to load the private key
         eval "$(ssh-agent -s)"
         ssh-add ~/.ssh/id_ed25519
 
@@ -43,8 +51,7 @@ jobs:
             echo "Error: build directory not found!"
             exit 1
         fi
-        build_archive="build-$(date +%Y%m%d%H%M%S).tar.gz"
-        tar -cvf $build_archive build
+        tar -cvf build.tar.gz build
 
     - name: Deploy to Tomcat server
       env:
@@ -53,11 +60,9 @@ jobs:
         TOMCAT_WEBAPPS_PATH: ${{ secrets.TOMCAT_WEBAPPS_PATH }}
       run: |
         echo "Transferring build archive to the server..."
-        rsync -avz -e "ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" $build_archive $SERVER_USER@$SERVER_SSH_IP:/tmp/$build_archive
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to transfer the build archive"
-          exit 1
-        fi
+        
+        # Use /tmp as a temporary directory for the transfer
+        scp -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build.tar.gz $SERVER_USER@$SERVER_SSH_IP:/tmp/build.tar.gz
 
         echo "Deploying application to Tomcat..."
         ssh -p 2222 -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_SSH_IP << EOF
@@ -68,12 +73,13 @@ jobs:
           sudo rm -rf $TOMCAT_WEBAPPS_PATH/ROOT/*
 
           echo "Extracting new build files..."
-          sudo tar -xzf /tmp/$build_archive -C $TOMCAT_WEBAPPS_PATH/ROOT
+          # Correct extraction to target Tomcat webapp directory
+          sudo tar -xzf /tmp/build.tar.gz -C $TOMCAT_WEBAPPS_PATH/ROOT
 
           echo "Starting Tomcat server..."
           sudo systemctl start tomcat
 
           echo "Deployment completed successfully!"
-          rm /tmp/$build_archive
+          # Remove temporary build archive
+          sudo rm /tmp/build.tar.gz
         EOF
-
