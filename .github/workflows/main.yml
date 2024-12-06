@@ -1,4 +1,4 @@
-name: SSH Setup and Connection
+name: Deploy Build to Tomcat
 
 on:
   push:
@@ -6,20 +6,34 @@ on:
       - main
 
 jobs:
-  setup-ssh:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up SSH
+    - name: Set up Node.js (if using React or similar)
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'  # Adjust to the version you need
+
+    - name: Install dependencies
       run: |
-        echo "Setting up SSH..."
-       
-        # Create .ssh directory if it doesn't exist
+        npm install
+    - name: Build project
+      run: |
+        # Build your project and create the build directory
+        if [ ! -d "build" ]; then
+          echo "Build directory does not exist, creating it..."
+          npm run build  # Adjust this to the actual build command for your project
+        fi
+        echo "Creating build tarball..."
+        tar -czf build.tar.gz -C build .
+    - name: Add SSH key to known hosts
+      run: |
         mkdir -p ~/.ssh
-       
+        ssh-keyscan -p 2222 182.183.2.96 >> ~/.ssh/known_hosts
         # Add the private key from GitHub Secrets
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
@@ -31,11 +45,26 @@ jobs:
         # Use ssh-agent to load the private key
         eval "$(ssh-agent -s)"
         ssh-add ~/.ssh/id_ed25519
-
-    - name: Test SSH Connection
+    - name: Transfer build archive to the server
       run: |
-        echo "Testing SSH Connection..."
-        ssh -i ~/.ssh/id_ed25519 -p 2222 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey root@182.183.2.96 -v
-        echo "done done done"
-      env:
-        SERVER_SSH_IP: 182.183.2.96
+        echo "Transferring build archive to the server..."
+        echo root@182.183.2.96
+        scp -P 2222 -o StrictHostKeyChecking=no -o PreferredAuthentications=publickey -i ~/.ssh/id_ed25519 build.tar.gz root@182.183.2.96:/tmp/
+    - name: Deploying application to Tomcat
+      run: |
+        echo "Deploying application to Tomcat..."
+        ssh -p 2222 root@182.183.2.96 << EOF
+          echo "Stopping Tomcat server..."
+          sudo systemctl stop tomcat
+          
+          echo "Cleaning up old files..."
+          sudo rm -rf /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT/*
+          
+          echo "Extracting new build files..."
+          sudo tar -xzf /tmp/build.tar.gz -C /opt/tomcat/apache-tomcat-9.0.97/webapps/ROOT
+          
+          echo "Starting Tomcat server..."
+          sudo systemctl start tomcat
+          
+          echo "Deployment completed successfully!"
+        EOF
